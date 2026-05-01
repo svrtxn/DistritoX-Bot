@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const Transaccion = require("../../Models/transaccion");
-const { checkBotAccess } = require("../../Functions/permisos");
+const { checkFinanzasAccess } = require("../../Functions/permisos");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -31,7 +31,7 @@ module.exports = {
         }
 
         // Verificar Staff
-        if (!await checkBotAccess(interaction)) return;
+        if (!await checkFinanzasAccess(interaction)) return;
 
         const monto = interaction.options.getNumber("monto");
         const descripcion = interaction.options.getString("descripcion");

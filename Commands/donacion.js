@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
-const { checkBotAccess } = require("../Functions/permisos");
+const { checkFinanzasAccess } = require("../Functions/permisos");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -23,7 +23,7 @@ module.exports = {
         }
 
         // Verificar permisos de staff
-        if (!await checkBotAccess(interaction)) return;
+        if (!await checkFinanzasAccess(interaction)) return;
 
         // Obtener el monto ingresado por el usuario
         const monto = interaction.options.getString("monto");

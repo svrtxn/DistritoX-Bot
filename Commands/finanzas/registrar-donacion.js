@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const Transaccion = require("../../Models/transaccion");
-const { checkBotAccess } = require("../../Functions/permisos");
+const { checkFinanzasAccess } = require("../../Functions/permisos");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -22,7 +22,7 @@ module.exports = {
             return interaction.reply({ content: "❌ Este comando solo puede usarse en un servidor.", flags: MessageFlags.Ephemeral });
         }
 
-        if (!await checkBotAccess(interaction)) return;
+        if (!await checkFinanzasAccess(interaction)) return;
 
         const usuario = interaction.options.getUser("usuario");
         const monto = interaction.options.getNumber("monto");

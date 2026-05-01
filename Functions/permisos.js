@@ -135,19 +135,31 @@ const checkDeveloperAccess = async (interaction) => {
 };
 
 /**
- * ✅ ACCESO SANCIONES (MOD_AREA o superior + Encargados)
+ * ✅ ACCESO SANCIONES (Dev, Admin, JefeStaff, Owner)
  * Comandos: /sancion
- * Requiere: MOD_AREA, ENCARGADO_AREA, ADMIN, JEFESTAFF u OWNER
+ * Requiere: ROL_OWNER, ROL_JEFESTAFF, ROL_DEVELOPER, ROL_ADMIN
  */
 const checkSancionesAccess = async (interaction) => {
-    const roles = [
-        ...getRoles('ROL_OWNER', 'ROL_JEFESTAFF', 'ROL_ADMIN', 'ROL_ENCARGADO_AREA', 'ROL_MOD_AREA'),
-        ...ENCARGADOS()
-    ];
+    const roles = getRoles('ROL_OWNER', 'ROL_JEFESTAFF', 'ROL_DEVELOPER', 'ROL_ADMIN');
 
     if (!hasAnyRole(interaction.member, roles)) {
-        console.log(`[PERMISOS] ❌ ${interaction.user.tag} → /${interaction.commandName} (requiere: Mod Area+)`);
-        return denyAccess(interaction, '❌ No tienes permisos para gestionar sanciones. (Requiere: Mod de Área o superior)');
+        console.log(`[PERMISOS] ❌ ${interaction.user.tag} → /${interaction.commandName} (requiere: Admin+)`);
+        return denyAccess(interaction, '❌ No tienes permisos para gestionar sanciones. (Requiere: Admin, Developer o superior)');
+    }
+    return true;
+};
+
+/**
+ * ✅ ACCESO FINANZAS (Owner, JefeStaff, Encargado VIP/Donaciones)
+ * Comandos: /donacion, /registrar-donacion, /registrar-gasto
+ * Requiere: ROL_OWNER, ROL_JEFESTAFF, ENC_VIP
+ */
+const checkFinanzasAccess = async (interaction) => {
+    const roles = getRoles('ROL_OWNER', 'ROL_JEFESTAFF', 'ENC_VIP');
+
+    if (!hasAnyRole(interaction.member, roles)) {
+        console.log(`[PERMISOS] ❌ ${interaction.user.tag} → /${interaction.commandName} (requiere: Finanzas)`);
+        return denyAccess(interaction, '❌ Solo el Owner, Jefe de Staff o el Encargado VIP/Donaciones pueden usar este comando.');
     }
     return true;
 };
@@ -204,6 +216,7 @@ module.exports = {
     checkStaffAccess,
     checkDeveloperAccess,
     checkSancionesAccess,
+    checkFinanzasAccess,
     checkLSPDAccess,
     checkJefeBandaAccess,
     checkStaffAdminAccess,
