@@ -164,7 +164,8 @@ El sistema de permisos es centralizado. Cada comando usa uno de estos checkers:
 | Checker | Acceso |
 |---------|--------|
 | `checkDeveloperAccess` | OWNER · JEFESTAFF · DEVELOPER |
-| `checkSancionesAccess` | MOD_AREA · ENCARGADO · ADMIN · JEFESTAFF · OWNER · ENC_* |
+| `checkSancionesAccess` | OWNER · JEFESTAFF · DEVELOPER · ADMIN |
+| `checkFinanzasAccess`  | OWNER · JEFESTAFF · ENC_VIP |
 | `checkBotAccess` | MOD+ · todos los ENC_* |
 | `checkStaffAccess` | STAFF+ · todos los ENC_* (más permisivo) |
 | `checkLSPDAccess` | Solo `ROL_LSPD` |
@@ -239,13 +240,7 @@ Al cerrar un ticket con el botón **Cerrar**, el bot:
 2. Envía el log al canal correspondiente (`LOGS_TICKETS_CANAL` o `LOGS_REPORTE_STAFF`).
 3. Elimina el canal tras 5 segundos.
 
----
 
-## 🎙️ Canal de Soporte de Voz
-
-Cuando un Staff entra al canal `CANAL_CREADOR_VOZ`, el bot crea automáticamente un canal de voz temporal `Soporte N` en la categoría `BOT_CATEGORIA`. El canal se elimina solo cuando queda vacío.
-
----
 
 ## ⏰ Cron Jobs
 
