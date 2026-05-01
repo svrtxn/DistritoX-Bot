@@ -1,26 +1,30 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>DISTRITO X | Dashboard Financiero</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    
+
     <link rel="icon" href="Isotipo_Color_Transparente.png" type="image/png">
-    
+
     <style>
         /* --- ESTILOS PERSONALIZADOS --- */
-        
+
         .server-logo {
-            height: 80px; 
+            height: 80px;
             margin-right: 15px;
             filter: drop-shadow(0 0 8px rgba(217, 70, 239, 0.6));
             transition: transform 0.3s ease;
         }
-        .server-logo:hover { transform: scale(1.05); }
+
+        .server-logo:hover {
+            transform: scale(1.05);
+        }
 
         .title-bar h2 {
-            font-size: 28px; 
+            font-size: 28px;
             color: #fff;
             text-transform: uppercase;
             letter-spacing: 2px;
@@ -37,6 +41,7 @@
             width: 320px;
             transition: all 0.3s ease;
         }
+
         .search-input:focus {
             outline: none;
             border-color: var(--neon-purple);
@@ -49,11 +54,17 @@
             border-bottom: 1px dashed var(--neon-purple);
             transition: color 0.2s;
         }
+
         .channel-link:hover {
             color: var(--neon-purple);
             border-bottom: 1px solid var(--neon-purple);
         }
-        .channel-icon { font-size: 0.8em; margin-left: 5px; opacity: 0.7; }
+
+        .channel-icon {
+            font-size: 0.8em;
+            margin-left: 5px;
+            opacity: 0.7;
+        }
 
         /* Botón de borrar */
         .delete-btn {
@@ -66,20 +77,21 @@
             font-size: 1.2em;
             transition: all 0.2s;
         }
+
         .delete-btn:hover {
             background: rgba(255, 59, 59, 0.3);
             transform: scale(1.1);
         }
-
     </style>
 </head>
+
 <body>
 
     <div class="dashboard-container">
         <header>
             <div class="admin-info">
                 <img src="distrito_x.png" alt="Distrito X Logo" class="server-logo">
-                
+
                 <div>
                     <span class="label">REGISTRO FINANCIERO</span>
                     <div class="status-dot">CONEXIÓN SEGURA ESTABLECIDA</div>
@@ -118,7 +130,7 @@
                 <div class="bar-accent"></div>
                 <h2>TRANSACCIONES</h2>
             </div>
-            
+
             <div class="search-container">
                 <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar por ID, Staff, Tipo...">
             </div>
@@ -139,12 +151,15 @@
                     </tr>
                 </thead>
                 <tbody id="table-body">
-                    <tr><td colspan="7" style="text-align:center; padding: 20px;">Iniciando conexión segura con Atlas Cluster...</td></tr>
+                    <tr>
+                        <td colspan="7" style="text-align:center; padding: 20px;">Iniciando conexión segura con Atlas
+                            Cluster...</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
-        
-        <div class="label">
+
+        <div class="label" style="margin-top: 20px;">
             desarrollado por sarten
         </div>
     </div>
@@ -174,7 +189,7 @@
             data.forEach(row => {
                 // Verificar si es Ingreso o Gasto
                 const isIngreso = row.tipo === 'INGRESO';
-                
+
                 const tipoClass = isIngreso ? 'badge-ingreso' : 'badge-gasto';
                 const tipoLabel = isIngreso ? '● DONACIÓN' : '● GASTO';
                 const montoClass = isIngreso ? 'text-green' : 'text-orange';
@@ -183,7 +198,7 @@
                 // --- LÓGICA USUARIO ---
                 // Si es GASTO o no tiene usuario, forzamos "N/A"
                 let usuarioHtml = `<span class="na-text" style="opacity:0.3;">N/A</span>`;
-                
+
                 // Solo mostramos usuario si es INGRESO y el objeto usuario existe
                 if (isIngreso && row.usuario && row.usuario.name !== 'N/A') {
                     usuarioHtml = `
@@ -261,7 +276,7 @@
             try {
                 const response = await fetch('/api/finanzas');
                 const data = await response.json();
-                
+
                 // Guardamos TODOS los datos
                 allTransactions = data.registros;
 
@@ -274,7 +289,7 @@
                 // --- FIX: REFRESCO INTELIGENTE ---
                 // Verificamos si hay algo escrito en el buscador
                 const currentSearch = document.getElementById('searchInput').value;
-                
+
                 if (currentSearch.trim() !== "") {
                     // Si el usuario estaba buscando algo, mantenemos su búsqueda
                     const filtered = filterData(currentSearch);
@@ -323,4 +338,5 @@
         setInterval(loadData, 10000); 
     </script>
 </body>
+
 </html>

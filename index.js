@@ -1,26 +1,41 @@
 require('dotenv').config();
-const cron = require('node-cron'); 
+
+// ─────────────────────────────────────────────────────────────
+// 🛡️ RED DE SEGURIDAD GLOBAL — Evita que el bot se caiga
+//    por cualquier error no manejado en cualquier parte del código
+// ─────────────────────────────────────────────────────────────
+process.on('uncaughtException', (error) => {
+    console.error('🚨 [UNCAUGHT EXCEPTION] Error no atrapado — el bot sigue corriendo:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('🚨 [UNHANDLED REJECTION] Promesa rechazada no manejada — el bot sigue corriendo:', reason);
+});
+// ─────────────────────────────────────────────────────────────
+
+const cron = require('node-cron');
+const mongoose = require('mongoose');
 const Transaccion = require('./Models/transaccion'); // ⚠️ Asegúrate que tu archivo en la carpeta Models empiece con Mayúscula (Transaccion.js)
 
 // ---------------------------------------------------------
 // 🌐 IMPORTAR EL SERVIDOR DEL DASHBOARD
 // ---------------------------------------------------------
 // Si aún no creas la carpeta Dashboard, comenta esta línea para que no de error.
-const startDashboard = require('./Dashboard/server'); 
+const startDashboard = require('./Dashboard/server');
 
 const token = process.env.DISCORD_TOKEN;
 
-const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection, ActivityType } = require('discord.js');
 const { Guilds, GuildMembers, GuildMessages } = GatewayIntentBits;
 const { User, Message, GuildMember, ThreadMember } = Partials;
 
 const { loadEvents } = require('./Handlers/eventHandler');
 const { loadCommands } = require('./Handlers/commandHandler');
-const { loadButtons } = require('./Handlers/buttonHandler'); 
+const { loadButtons } = require('./Handlers/buttonHandler');
 
 const client = new Client({
     intents: [Guilds, GuildMembers, GuildMessages],
-    partials: [User, Message, GuildMember, ThreadMember] 
+    partials: [User, Message, GuildMember, ThreadMember]
 });
 
 client.events = new Collection();
@@ -29,14 +44,22 @@ client.buttons = new Collection();
 
 (async () => {
     try {
+        mongoose.set('bufferCommands', false);
+        await mongoose.connect(process.env.MONGO_URL, {
+            serverSelectionTimeoutMS: 5000,
+        });
+        console.log('✅ Conexión exitosa a base de datos de MongoDB');
+
         await loadEvents(client);
-        await loadButtons(client); 
+        await loadButtons(client);
 
         await client.login(token);
 
         client.once('ready', async () => {
-            await loadCommands(client);  
+            await loadCommands(client);
             console.log(`✅ El cliente se ha iniciado correctamente: ${client.user.tag}`);
+
+            client.user.setActivity('Cocinando...', { type: ActivityType.Playing });
 
             // ---------------------------------------------------------
             // 🌐 INICIAR DASHBOARD WEB (PUERTO 3000)
@@ -51,22 +74,21 @@ client.buttons = new Collection();
             // ⏰ INICIO DEL SISTEMA DE CRON JOBS (RECORDATORIOS)
             // ---------------------------------------------------------
             console.log('⏰ Sistema de recordatorios automáticos iniciado...');
-            
+
             // Ejecutar cada minuto (* * * * *)
             cron.schedule('* * * * *', async () => {
                 const ahora = new Date();
-                
+
                 // Calcular fecha límite (Ej: Avisar 3 días antes de que venza)
                 const diasAnticipacion = 3;
-                const fechaLimite = new Date();
-                fechaLimite.setDate(ahora.getDate() + diasAnticipacion);
+                const fechaLimite = new Date(ahora.getTime() + (diasAnticipacion * 24 * 60 * 60 * 1000));
 
                 try {
                     // Buscar suscripciones MENSUALES, activas, que venzan pronto y NO hayan sido avisadas
                     const porVencer = await Transaccion.find({
                         tipo: 'INGRESO',
                         esMensual: true,
-                        recordatorioEnviado: false, 
+                        recordatorioEnviado: false,
                         fechaRenovacion: {
                             $gte: ahora,       // Que venza en el futuro (no vencidas ya)
                             $lte: fechaLimite  // Pero dentro de los próximos 3 días
@@ -130,6 +152,7 @@ client.buttons = new Collection();
         });
 
     } catch (error) {
-        console.error("❌ Error al iniciar el bot:", error);
+        console.error("❌ Error crítico al iniciar el bot:", error);
+        // No hacemos process.exit() para que los manejadores globales sigan activos
     }
 })();

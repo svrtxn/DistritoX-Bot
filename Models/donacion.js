@@ -12,6 +12,6 @@ const donacionSchema = new mongoose.Schema({
     fechaRenovacion: { type: Date, required: false } 
 });
 
-const Donacion = mongoose.model('Donation', donacionSchema);
+const Donacion = mongoose.model('Donacion', donacionSchema, 'donaciones');
 
 module.exports = Donacion;

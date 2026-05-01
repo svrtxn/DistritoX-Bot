@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const Transaccion = require("../../Models/transaccion");
 const { checkBotAccess } = require("../../Functions/permisos");
 
@@ -27,10 +27,9 @@ module.exports = {
     async execute(interaction) {
         // Validación de servidor
         if (!interaction.guild) {
-            return interaction.reply({ content: "❌ Este comando solo puede usarse en un servidor.", ephemeral: true });
+            return interaction.reply({ content: "❌ Este comando solo puede usarse en un servidor.", flags: MessageFlags.Ephemeral });
         }
 
-        // Verificar Staff
         // Verificar Staff
         if (!checkBotAccess(interaction)) return;
 
@@ -80,11 +79,11 @@ module.exports = {
 
             if (logChannel) await logChannel.send({ embeds: [embed] });
 
-            return interaction.reply({ content: "✅ Gasto registrado correctamente en la base de datos.", ephemeral: true });
+            return interaction.reply({ content: "✅ Gasto registrado correctamente en la base de datos.", flags: MessageFlags.Ephemeral });
 
         } catch (error) {
             console.error(error);
-            return interaction.reply({ content: `❌ Error: ${error.message}`, ephemeral: true });
+            return interaction.reply({ content: `❌ Error: ${error.message}`, flags: MessageFlags.Ephemeral });
         }
     }
 };

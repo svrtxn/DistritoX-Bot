@@ -78,22 +78,33 @@ module.exports = {
                 },
                 {
                     id: interaction.user.id,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
                 }
             ];
 
-            // Agregar permisos para cada rol de reviewer
+            // Agregar permisos para cada rol de reviewer si existe en el guild
             rolesStaffReviewers.forEach(rolId => {
-                permissionOverwrites.push({
-                    id: rolId,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                });
+                if (interaction.guild.roles.cache.has(rolId)) {
+                    permissionOverwrites.push({
+                        id: rolId,
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+                    });
+                } else {
+                    console.warn(`[WARN] El rol reviewer (${rolId}) no existe en el servidor. Saltando...`);
+                }
             });
+
+            const categoryObj = interaction.guild.channels.cache.get(categoriaId);
+            const validCategoryId = categoryObj && categoryObj.type === ChannelType.GuildCategory ? categoriaId : null;
+
+            if (!validCategoryId) {
+                console.warn(`[WARN] La categoría (${categoriaId}) no existe o no es válida. Creando en la raíz...`);
+            }
 
             const ticketChannel = await interaction.guild.channels.create({
                 name: ticketName,
                 type: ChannelType.GuildText,
-                parent: categoriaId,
+                parent: validCategoryId,
                 permissionOverwrites: permissionOverwrites,
             });
 

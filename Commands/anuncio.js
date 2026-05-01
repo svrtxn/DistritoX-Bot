@@ -1,4 +1,5 @@
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, MessageFlags } = require("discord.js");
+const { checkBotAccess } = require("../Functions/permisos");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -29,12 +30,11 @@ module.exports = {
         if (!interaction.guild) {
             return interaction.reply({
                 content: "❌ Este comando solo puede usarse en un servidor.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
         // Verificar permisos
-        const { checkBotAccess } = require("../Functions/permisos");
         if (!checkBotAccess(interaction)) return;
 
         const titulo = interaction.options.getString("titulo");
@@ -59,7 +59,7 @@ module.exports = {
 
         await interaction.reply({
             content: "✅ Anuncio enviado correctamente.",
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     }
 };

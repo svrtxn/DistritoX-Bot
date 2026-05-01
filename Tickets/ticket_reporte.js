@@ -17,15 +17,10 @@ module.exports = {
     async execute(interaction) {
         const categoriaId = process.env.REPORTES_CATEGORIA;
 
-        // Roles de staff (Rango 1 a 6) que verán el reporte
-        // Se excluye Soporte (Rango 7/8) según indicaciones implícitas de jerarquía alta para reportes
+        // Roles Reporte: Admin + Staff DistritoX
         const rolesStaffReviewers = [
-            process.env.RANGO_OWNER,
-            process.env.RANGO_JEFE_STAFF,
-            process.env.RANGO_DEVELOPER,
-            process.env.RANGO_ENCARGADO_AREA,
-            process.env.RANGO_MOD_AREA,
-            process.env.RANGO_MOD
+            process.env.ADMINISTRADOR_ROL,
+            process.env.STAFF_ROL
         ].filter(id => id);
 
         if (!categoriaId) {
@@ -77,21 +72,32 @@ module.exports = {
                 },
                 {
                     id: interaction.user.id,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
                 }
             ];
 
             rolesStaffReviewers.forEach(rolId => {
-                permissions.push({
-                    id: rolId,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                });
+                if (interaction.guild.roles.cache.has(rolId)) {
+                    permissions.push({
+                        id: rolId,
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+                    });
+                } else {
+                    console.warn(`[WARN] El rol reviewer de reporte (${rolId}) no existe en el servidor. Saltando...`);
+                }
             });
+
+            const categoryObj = interaction.guild.channels.cache.get(categoriaId);
+            const validCategoryId = categoryObj && categoryObj.type === ChannelType.GuildCategory ? categoriaId : null;
+
+            if (!validCategoryId) {
+                console.warn(`[WARN] La categoría (${categoriaId}) no existe o no es válida. Creando en la raíz...`);
+            }
 
             const ticketChannel = await interaction.guild.channels.create({
                 name: ticketName,
                 type: ChannelType.GuildText,
-                parent: categoriaId,
+                parent: validCategoryId,
                 permissionOverwrites: permissions,
             });
 

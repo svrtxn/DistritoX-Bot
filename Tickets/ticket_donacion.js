@@ -7,7 +7,8 @@ const {
     ActionRowBuilder,
     PermissionFlagsBits,
     ButtonBuilder,
-    ButtonStyle
+    ButtonStyle,
+    MessageFlags
 } = require('discord.js');
 
 module.exports = {
@@ -17,15 +18,13 @@ module.exports = {
         const categoriaId = process.env.DONACIONES_CATEGORIA;
         const donacionesRolId = process.env.DONACIONES_ROL;
 
-        // Roles de jerarquía a incluir (Owner y Jefe Staff)
+        // Roles a incluir
         const jerarquiaRoles = [
-            process.env.RANGO_OWNER,
-            process.env.RANGO_JEFE_STAFF
         ].filter(id => id);
 
         if (!categoriaId) {
             console.error("❌ ERROR: Faltan IDs en .env (DONACIONES_CATEGORIA)");
-            return interaction.reply({ content: "❌ Error de configuración.", ephemeral: true });
+            return interaction.reply({ content: "❌ Error de configuración.", flags: MessageFlags.Ephemeral });
         }
 
         const modal = new ModalBuilder()
@@ -70,30 +69,39 @@ module.exports = {
                 },
                 {
                     id: interaction.user.id,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
                 }
             ];
 
             // Agregar rol de donaciones
-            if (donacionesRolId) {
+            if (donacionesRolId && interaction.guild.roles.cache.has(donacionesRolId)) {
                 permissions.push({
                     id: donacionesRolId,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
                 });
             }
 
             // Agregar jerarquía
             jerarquiaRoles.forEach(rolId => {
-                permissions.push({
-                    id: rolId,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                });
+                if (interaction.guild.roles.cache.has(rolId)) {
+                    permissions.push({
+                        id: rolId,
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+                    });
+                }
             });
+
+            const categoryObj = interaction.guild.channels.cache.get(categoriaId);
+            const validCategoryId = categoryObj && categoryObj.type === ChannelType.GuildCategory ? categoriaId : null;
+
+            if (!validCategoryId) {
+                console.warn(`[WARN] La categoría (${categoriaId}) no existe o no es válida. Creando en la raíz...`);
+            }
 
             const ticketChannel = await interaction.guild.channels.create({
                 name: ticketName,
                 type: ChannelType.GuildText,
-                parent: categoriaId,
+                parent: validCategoryId,
                 permissionOverwrites: permissions,
             });
 
@@ -135,12 +143,12 @@ ${tipoDonacionValue}
 
             await submitted.reply({
                 content: `✅ Tu ticket de **Donación** fue creado correctamente: <#${ticketChannel.id}>`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
 
         } catch (error) {
             console.error("❌ Error creando canal:", error);
-            await submitted.reply({ content: "❌ Error al crear el ticket.", ephemeral: true });
+            await submitted.reply({ content: "❌ Error al crear el ticket.", flags: MessageFlags.Ephemeral });
         }
     },
 };

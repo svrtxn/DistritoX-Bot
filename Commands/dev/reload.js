@@ -1,7 +1,6 @@
-const { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, Client } = require('discord.js');
+const { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, Client, MessageFlags } = require('discord.js');
 const { loadCommands } = require('../../Handlers/commandHandler');
 const { loadEvents } = require('../../Handlers/eventHandler');
-const { execute } = require('../sancion');
 
 module.exports = {
     developer: true,
@@ -29,7 +28,7 @@ module.exports = {
                     loadEvents(client);
                     interaction.reply({
                         content: '✅ Eventos recargados correctamente.',
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
                 }
                 break;
@@ -38,7 +37,7 @@ module.exports = {
                 loadCommands(client);
                 interaction.reply({
                     content: '✅ Comandos recargados correctamente.',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 break;
         }

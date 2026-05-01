@@ -3,17 +3,15 @@ const Canvas = require('canvas');
 const { registerFont } = require('canvas');
 const path = require('path');
 
+// Registrar fuente fuera de execute para evitar redundancia (Optimización)
+registerFont(path.join(process.cwd(), 'Static', 'PublicSans-Regular.ttf'), { family: 'Public Sans' });
+
 module.exports = {
     name: "guildMemberAdd",
     once: false,
 
     async execute(member, client) {
         const bgPath = path.join(process.cwd(), 'Static', 'IDENTIFICACION.png');
-
-        registerFont(
-            path.join(process.cwd(), 'Static', 'PublicSans-Regular.ttf'),
-            { family: 'Public Sans' }
-        );
 
         const canvas = Canvas.createCanvas(1800, 1144);
         const ctx = canvas.getContext('2d');
@@ -25,7 +23,7 @@ module.exports = {
 
 
             ctx.fillStyle = '#501f3c';
-            ctx.font = '48px "Public Sans"';
+            ctx.font = '48px Public Sans';
 
             
             const nameText = member.user.username.toUpperCase();
@@ -74,9 +72,13 @@ module.exports = {
 
         } catch (error) {
             console.error(error);
-            const errorMessage = 'Hubo un error al generar la imagen.';
-            const canal = await client.channels.fetch(process.env.CANAL_BIENVENIDA);
-            await canal.send({ content: errorMessage });
+            try {
+                const errorMessage = 'Hubo un error al generar la imagen.';
+                const canal = await client.channels.fetch(process.env.CANAL_BIENVENIDA);
+                await canal.send({ content: errorMessage });
+            } catch (fallbackError) {
+                console.error("Error crítico: No se pudo enviar el mensaje de error de bienvenida, problemas de permisos (Missing Access).", fallbackError.message);
+            }
         }
     }
 };

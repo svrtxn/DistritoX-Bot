@@ -27,52 +27,97 @@ module.exports = {
             .setCustomId('ticket_select') // Este ID lo maneja el interactionCreate
             .setPlaceholder('🎫 Selecciona el tipo de ticket')
             .addOptions([
-                { label: 'Soporte | Dudas', value: 'ticket_soporte', description: 'Responde dudas y reporta bugs', emoji: '🔎' },
-
-                // 👇 CAMBIO: Lo puse en SINGULAR ('ticket_reporte') para que coincida con tu archivo
-                { label: 'Reportes', value: 'ticket_reporte', description: 'Reporte general', emoji: '🚩' },
-
-                { label: 'Reporte a STAFF', value: 'ticket_reporte_staff', description: '🚨 Reporta a un miembro del staff', emoji: '🚨' },
-                { label: 'Donación', value: 'ticket_donacion', description: 'Dudas sobre compras y beneficios', emoji: '💎' },
-                { label: 'Postulación Banda', value: 'ticket_banda', description: 'Postulación de Organización Delictiva', emoji: '🔫' },
-                { label: 'Interés Local', value: 'ticket_local', description: 'Consultas sobre Locales Disponibles', emoji: '🏪' },
-                { label: 'Streamer', value: 'ticket_streamer', description: 'Postulación a Creador de Contenido / Streamer', emoji: '🎥' },
-                { label: 'Postulación STAFF', value: 'ticket_staff', description: 'Postulación a Staff', emoji: '🛡️' },
+                {
+                    label: 'Soporte',
+                    value: 'ticket_soporte',
+                    description: 'Consultas generales, bugs y problemas técnicos',
+                    emoji: { id: '1427457867862118522', animated: true }
+                },
+                {
+                    label: 'Reportes',
+                    value: 'ticket_reporte',
+                    description: 'Reportar usuarios, roles o bugs de juego',
+                    emoji: { id: '1398032552203128984', animated: true }
+                },
+                {
+                    label: 'Reporte a STAFF',
+                    value: 'ticket_reporte_staff',
+                    description: 'Reportar a un integrante del Staff',
+                    emoji: { id: '1398032552203128984', animated: true }
+                },
+                {
+                    label: 'Donaciones',
+                    value: 'ticket_donacion',
+                    description: 'Dudas sobre compras y beneficios exclusivos',
+                    emoji: { id: '1411393357699219637', animated: true }
+                },
+                {
+                    label: 'Postulación Org. Delictiva',
+                    value: 'ticket_banda',
+                    description: 'Registro de organización delictiva',
+                    emoji: { id: '1427457881992859818', animated: true }
+                },
+                {
+                    label: 'Negocios & Locales',
+                    value: 'ticket_local',
+                    description: 'Postular para administrar un negocio',
+                    emoji: { id: '1427457888494026752', animated: true }
+                },
+                {
+                    label: 'Creador de Contenido | Streamer',
+                    value: 'ticket_streamer',
+                    description: 'Colaboraciones y roles de contenido',
+                    emoji: { id: '1398031498367467661', animated: false }
+                },
+                {
+                    label: 'Postulación a Staff',
+                    value: 'ticket_staff',
+                    description: 'Formar parte del equipo de STAFF',
+                    emoji: { id: '1406836520715030548', animated: true }
+                },
             ]);
 
         const row = new ActionRowBuilder().addComponents(selectMenu);
 
         const embed = new EmbedBuilder()
             .setColor('#2f3136')
-            .setTitle('🧰 SISTEMA DE TICKETS | DistritoX')
-            .setDescription(`
-¡Bienvenido al sistema de soporte! Actualmente, el servidor se encuentra en un período de WIPE y preparación para el lanzamiento de la V2. Sin embargo, puedes comunicarte con el STAFF para asuntos urgentes o específicos a través de las siguientes categorías de tickets:
+            // .setTitle('🧰 SISTEMA DE TICKETS | DistritoX') // Comentado para usar el header en la descripción
+            .setDescription(`# SISTEMA DE TICKETS  |  Distrito<:1_distritoX:1403568810220585110> 
 
-🔎 **Soporte o Dudas:** Para responder dudas, reportar bugs y solicitar roles para creadores de contenido.
-
-🚩 **Reportes:**
-Reporte general o a STAFF.  
-
-💎 **Donación:**
-Para resolver dudas sobre compras, donaciones y beneficios exclusivos del servidor.  
-
-🔫 **Postulaciones Banda:**
-Postulación de Organización Delictiva.  
-
-🏪 **Locales:**
-Consultas sobre locales disponibles.
-
-🎥 **Streamer:** Postulación a Creador de Contenido / Streamer.  
-
-🛡️ **Postulación STAFF:** Postulación a Staff.
-
-**Cómo abrir un ticket:**
-1. Selecciona la categoría que mejor describa tu necesidad en el menú.
-2. Abre tu ticket y proporciona la información necesaria.
+*Bienvenido/a al sistema de tickets del servidor.*
+Aquí podrás encontrar la categoría exacta para recibir el soporte que necesitas. ¡Nuestro equipo está para ayudarte!
 
 
-¡Gracias por mantener la comunidad segura, organizada y activa! 
-`);
+*<a:announcement:1427457867862118522>Soporte*
+Para consultas generales, bugs, problemas técnicos o solicitar un rol para los creadores de contenido.
+
+*<a:alerta_roja_distritoX:1398032552203128984> Reportes*
+<a:purplearrow:1416565195538432131> Para reportar usuarios o roles que incumplan la normativa o bugs que afecten la experiencia de juego.
+<a:purplearrow:1416565195538432131> Para reportar a un integrante del Staff que incumpla la normativa o que afecte la experiencia de juego.
+
+*<a:1_distritox_coins:1411393357699219637> Donaciones*
+Para resolver dudas sobre compras, donaciones y beneficios exclusivos del servidor.
+
+*<a:purpleuzi:1427457881992859818>Postulación de Organización Delictiva*
+Para comenzar el proceso de registrar una organización delictiva dentro del servidor.
+
+*<a:computercodin:1427457888494026752>  Negocios & Locales*
+Para consultar o postular para administrar un negocio disponible en la ciudad.
+
+*<:distritoX_pepe:1398031498367467661> Creador de Contenido | Streamer*
+Para creadores de contenido, streamers y medios interesados en colaborar con el servidor.
+
+*<a:purplestar:1406836520715030548> Postulación a Staff*
+Para formar parte del equipo de STAFF y apoyar la moderación y crecimiento de la comunidad.
+
+
+## ¿Cómo abrir un ticket?
+1️⃣ Selecciona la categoría que mejor se ajuste a tu solicitud
+2️⃣ Abre el ticket y entrega la información necesaria que se te solicita
+3️⃣ *Ten paciencia:* un integrante del equipo te atenderá lo antes posible.
+
+
+## ¡Gracias por mantener la comunidad segura, organizada y con buen rol!`);
         await interaction.channel.send({ embeds: [embed], components: [row] });
         await interaction.reply({
             content: '✅ Panel de tickets creado correctamente.',

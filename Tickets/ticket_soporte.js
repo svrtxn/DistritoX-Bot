@@ -7,7 +7,8 @@ const {
     ActionRowBuilder,
     PermissionFlagsBits,
     ButtonBuilder,
-    ButtonStyle
+    ButtonStyle,
+    MessageFlags
 } = require('discord.js');
 
 module.exports = {
@@ -16,21 +17,14 @@ module.exports = {
     async execute(interaction) {
         const categoriaId = process.env.SOPORTE_CATEGORIA;
 
-        // Roles de Soporte (Todos los rangos + Soporte)
+        // Roles de Soporte: Staff DistritoX
         const rolesSoporte = [
-            process.env.RANGO_OWNER,
-            process.env.RANGO_JEFE_STAFF,
-            process.env.RANGO_DEVELOPER,
-            process.env.RANGO_ENCARGADO_AREA,
-            process.env.RANGO_MOD_AREA,
-            process.env.RANGO_MOD,
-            process.env.RANGO_SOPORTE,
-            process.env.RANGO_SOPORTE_PRUEBA
+            process.env.STAFF_ROL
         ].filter(id => id);
 
         if (!categoriaId) {
             console.error("❌ ERROR: Faltan IDs en .env (SOPORTE_CATEGORIA)");
-            return interaction.reply({ content: "❌ Error de configuración.", ephemeral: true });
+            return interaction.reply({ content: "❌ Error de configuración.", flags: MessageFlags.Ephemeral });
         }
         const modal = new ModalBuilder()
             .setCustomId('formularioSoporte')
@@ -54,6 +48,9 @@ module.exports = {
 
         if (!submitted) return;
 
+        // Diferir respuesta para evitar timeout de 3 segundos
+        await submitted.deferReply({ flags: MessageFlags.Ephemeral });
+
         let tipoSoporteValue = submitted.fields.getTextInputValue('tipoSoporte');
         if (tipoSoporteValue.length > 800) tipoSoporteValue = tipoSoporteValue.slice(0, 800) + '...';
 
@@ -74,21 +71,32 @@ module.exports = {
                 },
                 {
                     id: interaction.user.id,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
                 }
             ];
 
             rolesSoporte.forEach(rolId => {
-                permissions.push({
-                    id: rolId,
-                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                });
+                if (interaction.guild.roles.cache.has(rolId)) {
+                    permissions.push({
+                        id: rolId,
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+                    });
+                } else {
+                    console.warn(`[WARN] El rol soporte (${rolId}) no existe en el servidor. Saltando...`);
+                }
             });
+
+            const categoryObj = interaction.guild.channels.cache.get(categoriaId);
+            const validCategoryId = categoryObj && categoryObj.type === ChannelType.GuildCategory ? categoriaId : null;
+
+            if (!validCategoryId) {
+                console.warn(`[WARN] La categoría (${categoriaId}) no existe o no es válida. Creando en la raíz...`);
+            }
 
             const ticketChannel = await interaction.guild.channels.create({
                 name: ticketName,
                 type: ChannelType.GuildText,
-                parent: categoriaId,
+                parent: validCategoryId,
                 permissionOverwrites: permissions,
             });
 
@@ -126,14 +134,13 @@ ${tipoSoporteValue}
                 components: [cerrarButton],
             });
 
-            await submitted.reply({
+            await submitted.editReply({
                 content: `✅ Tu ticket de **SOPORTE** fue creado correctamente: <#${ticketChannel.id}>`,
-                ephemeral: true,
             });
 
         } catch (error) {
             console.error("❌ Error creando canal:", error);
-            await submitted.reply({ content: "❌ Error al crear el ticket.", ephemeral: true });
+            await submitted.editReply({ content: "❌ Error al crear el ticket de soporte." });
         }
     },
 };

@@ -26,6 +26,12 @@ module.exports = {
             return interaction.reply({ content: '❌ No se pudo encontrar el canal de logs.', flags: MessageFlags.Ephemeral });
         }
 
+        // Verificar que la interacción no haya expirado antes de deferir
+        if (interaction.createdTimestamp < Date.now() - 2500) {
+            console.warn(`[WARN] Interacción 'cerrar-ticket' expirada (>2.5s), descartando.`);
+            return;
+        }
+
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         let transcript;

@@ -9,7 +9,7 @@
     "express": "^5.2.1",
     "glob": "^11.1.0",
     "mongodb": "^7.0.0",
-    "moongose": "^1.0.0",
+    "mongoose": "^9.4.1",
     "node-cron": "^4.2.1",
     "nodecron": "^0.2.0"
   }

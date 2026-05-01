@@ -7,7 +7,8 @@ const {
     ActionRowBuilder,
     PermissionFlagsBits,
     ButtonBuilder,
-    ButtonStyle
+    ButtonStyle,
+    MessageFlags
 } = require('discord.js');
 
 module.exports = {
@@ -17,12 +18,13 @@ module.exports = {
         // --- 🔒 VERIFICACIÓN DE SEGURIDAD ---
         const categoriaId = process.env.REPORTES_STAFF_CATEGORIA;
         const ownerRolId = process.env.OWNER_ROL;
+        const jefeStaffRolId = process.env.RANGO_JEFE_STAFF;
 
-        if (!categoriaId || !ownerRolId) {
-            console.error("❌ ERROR: Faltan IDs en .env (REPORTES_STAFF_CATEGORIA o OWNER_ROL)");
-            return interaction.reply({ 
-                content: "❌ Error de configuración. Contacta a un administrador.", 
-                ephemeral: true 
+        if (!categoriaId || !ownerRolId || !jefeStaffRolId) {
+            console.error("❌ ERROR: Faltan IDs en .env (REPORTES_STAFF_CATEGORIA, OWNER_ROL, RANGO_JEFE_STAFF)");
+            return interaction.reply({
+                content: "❌ Error de configuración. Contacta a un administrador.",
+                ephemeral: true
             });
         }
         // -------------------------------------
@@ -35,7 +37,7 @@ module.exports = {
             .setCustomId('tipoReporte')
             .setLabel('Explicame brevemente lo sucedido')
             .setStyle(TextInputStyle.Paragraph)
-            .setMaxLength(500) 
+            .setMaxLength(500)
             .setRequired(true);
 
         const staff = new TextInputBuilder()
@@ -73,28 +75,47 @@ module.exports = {
         }
 
         try {
+            const permissionOverwrites = [
+                {
+                    id: interaction.guild.roles.everyone.id,
+                    deny: [PermissionFlagsBits.ViewChannel],
+                },
+                {
+                    id: interaction.user.id,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+                }
+            ];
+
+            if (interaction.guild.roles.cache.has(ownerRolId)) {
+                permissionOverwrites.push({
+                    id: ownerRolId,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+                });
+            }
+
+            if (interaction.guild.roles.cache.has(jefeStaffRolId)) {
+                permissionOverwrites.push({
+                    id: jefeStaffRolId,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+                });
+            }
+
+            const categoryObj = interaction.guild.channels.cache.get(categoriaId);
+            const validCategoryId = categoryObj && categoryObj.type === ChannelType.GuildCategory ? categoriaId : null;
+
+            if (!validCategoryId) {
+                console.warn(`[WARN] La categoría (${categoriaId}) no existe o no es una categoría válida. Creando en la raíz del servidor...`);
+            }
+
             const ticketChannel = await interaction.guild.channels.create({
                 name: ticketName,
                 type: ChannelType.GuildText,
-                parent: categoriaId,
-                permissionOverwrites: [
-                    {
-                        id: interaction.guild.roles.everyone.id,
-                        deny: [PermissionFlagsBits.ViewChannel],
-                    },
-                    {
-                        id: interaction.user.id,
-                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                    },
-                    {
-                        id: ownerRolId,
-                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                    }
-                ],
+                parent: validCategoryId,
+                permissionOverwrites: permissionOverwrites,
             });
 
             const embed = new EmbedBuilder()
-                .setColor('#1E90FF') 
+                .setColor('#1E90FF')
                 .setTitle('📣 Reporte a un STAFF | DistritoX')
                 .setDescription(`
 ¡Bienvenido al Sistema de Reportes de DistritoX!
@@ -124,19 +145,19 @@ ${tipoReporteValue}
             );
 
             await ticketChannel.send({
-                content: `<@${interaction.user.id}> <@&${ownerRolId}>`,
+                content: `<@${interaction.user.id}> <@&${ownerRolId}> <@&${jefeStaffRolId}>`,
                 embeds: [embed],
                 components: [cerrarButton],
             });
 
             await submitted.reply({
                 content: `✅ Tu ticket de **Reporte Staff** fue creado correctamente: <#${ticketChannel.id}>`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
 
         } catch (error) {
             console.error("❌ Error creando canal:", error);
-            await submitted.reply({ content: "❌ Error al crear el ticket.", ephemeral: true });
+            await submitted.reply({ content: "❌ Error al crear el ticket.", flags: MessageFlags.Ephemeral });
         }
     },
 };

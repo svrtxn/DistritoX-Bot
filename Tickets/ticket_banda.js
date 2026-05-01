@@ -7,7 +7,8 @@ const {
     ActionRowBuilder,
     PermissionFlagsBits,
     ButtonBuilder,
-    ButtonStyle
+    ButtonStyle,
+    MessageFlags
 } = require('discord.js');
 
 module.exports = {
@@ -15,12 +16,11 @@ module.exports = {
 
     async execute(interaction) {
         const categoriaId = process.env.POSTULACIONES_CATEGORIA;
-        const staffRolId = process.env.STAFF_ROL;
         const ilegalesRolId = process.env.ILEGALES_ROL;
 
-        if (!categoriaId || !staffRolId || !ilegalesRolId) {
-            console.error("❌ ERROR: Faltan IDs en .env (POSTULACIONES, STAFF o ILEGALES)");
-            return interaction.reply({ content: "❌ Error de configuración del bot.", ephemeral: true });
+        if (!categoriaId || !ilegalesRolId) {
+            console.error("❌ ERROR: Faltan IDs en .env (POSTULACIONES o ILEGALES)");
+            return interaction.reply({ content: "❌ Error de configuración del bot.", flags: MessageFlags.Ephemeral });
         }
         const modal = new ModalBuilder()
             .setCustomId('formularioBandaPrincipal')
@@ -59,7 +59,7 @@ module.exports = {
 
         if (!submitted) return;
 
-        await submitted.deferReply({ ephemeral: true });
+        await submitted.deferReply({ flags: MessageFlags.Ephemeral });
 
         const nombreBanda = submitted.fields.getTextInputValue('bandaNombre');
         const colorBanda = submitted.fields.getTextInputValue('bandaColor');
@@ -75,32 +75,43 @@ module.exports = {
         }
 
         try {
+            const permissionOverwrites = [
+                {
+                    id: interaction.guild.roles.everyone.id,
+                    deny: [PermissionFlagsBits.ViewChannel],
+                },
+                {
+                    id: interaction.user.id,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+                }
+            ];
+
+            // Comprobar si los roles existen en el servidor antes de asignarlos, para evitar crasheos (InvalidType)
+            if (interaction.guild.roles.cache.has(ilegalesRolId)) {
+                permissionOverwrites.push({
+                    id: ilegalesRolId,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+                });
+            } else {
+                console.warn(`[WARN] El rol ilegalesRolId (${ilegalesRolId}) no se encuentra en el servidor. Ocultando errores...`);
+            }
+
+            const categoryObj = interaction.guild.channels.cache.get(categoriaId);
+            const validCategoryId = categoryObj && categoryObj.type === ChannelType.GuildCategory ? categoriaId : null;
+
+            if (!validCategoryId) {
+                console.warn(`[WARN] La categoría (${categoriaId}) no existe o no es válida. Creando en la raíz...`);
+            }
+
             const ticketChannel = await interaction.guild.channels.create({
                 name: ticketName,
                 type: ChannelType.GuildText,
-                parent: categoriaId,
-                permissionOverwrites: [
-                    {
-                        id: interaction.guild.roles.everyone.id,
-                        deny: [PermissionFlagsBits.ViewChannel],
-                    },
-                    {
-                        id: interaction.user.id,
-                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                    },
-                    {
-                        id: staffRolId,
-                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                    },
-                    {
-                        id: ilegalesRolId,
-                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                    }
-                ],
+                parent: validCategoryId,
+                permissionOverwrites: permissionOverwrites,
             });
 
             const embed = new EmbedBuilder()
-                .setColor('#FF4C4C') 
+                .setColor('#FF4C4C')
                 .setTitle('☠️ Postulación de Organización Delictiva | DistritoX')
                 .setDescription(`¡Hola ${interaction.user.tag}! Tu postulación ha sido recibida.`)
                 .addFields(
@@ -123,7 +134,7 @@ module.exports = {
             );
 
             await ticketChannel.send({
-                content: `<@${interaction.user.id}> <@&${staffRolId}> <@&${ilegalesRolId}>`,
+                content: `<@${interaction.user.id}> <@&${ilegalesRolId}>`,
                 embeds: [embed],
                 components: [cerrarButton],
             });

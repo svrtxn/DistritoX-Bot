@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
-const { checkBotAccess } = require("../Functions/permisos");
+const { SlashCommandBuilder, AttachmentBuilder, MessageFlags } = require('discord.js');
+const path = require('path');
+const { checkStaffAccess } = require("../Functions/permisos");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,41 +16,62 @@ module.exports = {
             });
         }
 
-        // Usar el checker de rango
-        if (!checkBotAccess(interaction)) return;
+        // Usar el checker de rango que incluye a STAFF
+        if (!checkStaffAccess(interaction)) return;
 
-        // Texto del anuncio
-        const mensajeUpdate = `
-# ¡DISTRITO<:1_distritoX:1403568810220585110> YA ESTÁ ON!  
+        // Diferir la respuesta inmediatamente para evitar el error 10062 (Unknown Interaction)
+        // La subida del banner (7MB) puede tardar más de los 3 segundos permitidos.
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        try {
+            // Función para detectar y reemplazar emojis personalizados por nombre (:nombre:)
+            const replaceEmojis = (text) => {
+                return text.replace(/:([a-zA-Z0-9_]+):/g, (match, name) => {
+                    const emoji = interaction.client.emojis.cache.find(e => e.name.toLowerCase() === name.toLowerCase());
+                    return emoji ? emoji.toString() : match;
+                });
+            };
+
+            // Ruta de la imagen del banner
+            const imagePath = path.join(process.cwd(), "Static", "banner_fivem.gif");
+            const file = new AttachmentBuilder(imagePath);
+
+            const textoBase = 
+`# ¡DISTRITO :1_distritoX: YA ESTÁ ON!  
 
 *📖 IMPORTANTE – LEE LAS NORMATIVAS*
 🔹 Evita problemas revisando las reglas actualizadas.
 🔹 Respeta la inmersión y contribuye a una experiencia de rol de calidad.
 
 *⚠️ RECUERDA:*
-> Cada acto delictual DEBE ir acompañado de su entorno /911
+> Cada acto delictual DEBE ir acompañado de su entorno /entorno
 > Para asistencia médica enviando /auxilio
 > Sé creativo, respeta a los demás jugadores y haz que tu historia cuente.
 
 🚀 DistritoX no espera a nadie: la aventura comienza AHORA.
-|| @everyone || 
-`;
+@everyone`;
 
-        try {
-            // Enviar el mensaje al mismo canal donde se ejecuta
-            await interaction.channel.send(mensajeUpdate);
+            const mensajeFinal = replaceEmojis(textoBase);
 
-            // Confirmar al staff
-            await interaction.reply({
-                content: '✅ Mensaje de actualización enviado correctamente.',
-                flags: MessageFlags.Ephemeral
+            // 1. Enviar la imagen sola primero
+            await interaction.channel.send({
+                files: [file]
+            });
+
+            // 2. Enviar el mensaje de texto después
+            await interaction.channel.send({
+                content: mensajeFinal
+            });
+
+            // Confirmar al staff editando la respuesta diferida
+            await interaction.editReply({
+                content: '✅ Mensaje de actualización enviado correctamente.'
             });
 
         } catch (error) {
             console.error(error);
-            await interaction.reply({
-                content: '❌ Hubo un error al enviar el mensaje.',
-                flags: MessageFlags.Ephemeral
+            await interaction.editReply({
+                content: '❌ Hubo un error al enviar el mensaje de actualización.'
             });
         }
     }

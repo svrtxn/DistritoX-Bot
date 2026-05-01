@@ -4,21 +4,21 @@ const {
     ActionRowBuilder,
     PermissionFlagsBits,
     ButtonBuilder,
-    ButtonStyle
+    ButtonStyle,
+    MessageFlags
 } = require('discord.js');
 
 module.exports = {
     id: 'ticket_streamer',
 
     async execute(interaction) {
-        await interaction.reply({ content: '⏳ Creando tu ticket...', ephemeral: true });
+        await interaction.reply({ content: '⏳ Creando tu ticket...', flags: MessageFlags.Ephemeral });
 
         const categoriaId = process.env.POSTULACIONES_CATEGORIA;
-        const staffRolId = process.env.STAFF_ROL;
         const streamerRolId = process.env.STREAMER_ROL;
 
-        if (!categoriaId || !staffRolId || !streamerRolId) {
-            console.error("❌ ERROR: Faltan IDs en .env (POSTULACIONES, STAFF o STREAMER)");
+        if (!categoriaId || !streamerRolId) {
+            console.error("❌ ERROR: Faltan IDs en .env (POSTULACIONES o STREAMER)");
             return interaction.editReply({ content: "❌ Error de configuración del bot." });
         }
 
@@ -32,28 +32,38 @@ module.exports = {
         }
 
         try {
+            const permissionOverwrites = [
+                {
+                    id: interaction.guild.roles.everyone.id,
+                    deny: [PermissionFlagsBits.ViewChannel],
+                },
+                {
+                    id: interaction.user.id,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+                }
+            ];
+
+            if (interaction.guild.roles.cache.has(streamerRolId)) {
+                permissionOverwrites.push({
+                    id: streamerRolId,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.AttachFiles],
+                });
+            } else {
+                console.warn(`[WARN] El rol streamerRolId (${streamerRolId}) no se encuentra en el servidor. Ocultando errores...`);
+            }
+
+            const categoryObj = interaction.guild.channels.cache.get(categoriaId);
+            const validCategoryId = categoryObj && categoryObj.type === ChannelType.GuildCategory ? categoriaId : null;
+
+            if (!validCategoryId) {
+                console.warn(`[WARN] La categoría (${categoriaId}) no existe o no es válida. Creando en la raíz...`);
+            }
+
             const ticketChannel = await interaction.guild.channels.create({
                 name: ticketName,
                 type: ChannelType.GuildText,
-                parent: categoriaId,
-                permissionOverwrites: [
-                    {
-                        id: interaction.guild.roles.everyone.id,
-                        deny: [PermissionFlagsBits.ViewChannel],
-                    },
-                    {
-                        id: interaction.user.id,
-                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                    },
-                    {
-                        id: staffRolId,
-                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                    },
-                    {
-                        id: streamerRolId,
-                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory],
-                    }
-                ],
+                parent: validCategoryId,
+                permissionOverwrites: permissionOverwrites,
             });
 
             const embed = new EmbedBuilder()
@@ -67,7 +77,7 @@ module.exports = {
             );
 
             await ticketChannel.send({
-                content: `<@${interaction.user.id}> <@&${staffRolId}> <@&${streamerRolId}>`,
+                content: `<@${interaction.user.id}> <@&${streamerRolId}>`,
                 embeds: [embed],
                 components: [cerrarButton]
             });

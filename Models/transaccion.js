@@ -22,4 +22,4 @@ const transaccionSchema = new mongoose.Schema({
     sincronizadoWeb: { type: Boolean, default: false }
 });
 
-module.exports = mongoose.model('Transaccion', transaccionSchema);
+module.exports = mongoose.model('Transaccion', transaccionSchema, 'transacciones');

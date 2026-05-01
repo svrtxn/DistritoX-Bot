@@ -9,6 +9,9 @@ const Canvas = require('canvas');
 const { registerFont } = require('canvas');
 const path = require('path');
 
+// Registrar fuente fuera de execute para evitar redundancia (Optimización)
+registerFont(path.join(process.cwd(), 'static', 'PublicSans-Regular.ttf'), { family: 'Public Sans' });
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('bienvenida')
@@ -17,10 +20,7 @@ module.exports = {
 
     async execute(interaction) {
         // Asegúrate de que estas rutas sean correctas en tu proyecto
-        const fontPath = path.join(process.cwd(), 'static', 'PublicSans-Regular.ttf');
         const bgPath = path.join(process.cwd(), 'static', 'IDENTIFICACION.png'); // Usa el nombre de archivo real de tu imagen de fondo
-
-        registerFont(fontPath, { family: 'Public Sans' });
 
         const canvas = Canvas.createCanvas(1800, 1144);
         const ctx = canvas.getContext('2d');

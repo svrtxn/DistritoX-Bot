@@ -4,6 +4,7 @@ const {
     EmbedBuilder,
     MessageFlags
 } = require('discord.js');
+const { checkBotAccess } = require("../Functions/permisos");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -33,14 +34,15 @@ module.exports = {
         }
 
         // Verificación de permiso STAFF
-        const { checkBotAccess } = require("../Functions/permisos");
         if (!checkBotAccess(interaction)) return;
 
         const cantidad = interaction.options.getInteger('cantidad');
         const usuario = interaction.options.getUser('usuario');
 
         try {
-            const mensajes = await interaction.channel.messages.fetch();
+            // Limitar el fetch a lo necesario: si se filtra por usuario traemos más para tener margen
+            const fetchLimit = usuario ? Math.min(cantidad * 3, 100) : Math.min(cantidad + 1, 100);
+            const mensajes = await interaction.channel.messages.fetch({ limit: fetchLimit });
             let mensajesEliminados;
 
             if (usuario) {
