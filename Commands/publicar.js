@@ -32,7 +32,7 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        if (!checkBotAccess(interaction)) return;
+        if (!await checkBotAccess(interaction)) return;
 
         const forumId = interaction.options.getString("foro");
         const imagen = interaction.options.getAttachment("imagen");

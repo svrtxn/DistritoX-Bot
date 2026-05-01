@@ -1,29 +1,34 @@
+'use strict';
 const { loadFiles } = require('../Functions/fileLoader');
-const ascii = require('ascii-table');
-const table = new ascii().setHeading('Events', 'Status');
 
+/**
+ * Carga todos los eventos de la carpeta Events/ y los registra en el cliente.
+ * @param {import('discord.js').Client} client
+ */
 async function loadEvents(client) {
-    await client.events.clear();
+    const AsciiTable = require('ascii-table');
+    const table = new AsciiTable().setHeading('Event', 'Status');
 
-    const Files = await loadFiles('Events');
-    Files.forEach((file) => {
+    client.events.clear();
+
+    const files = await loadFiles('Events');
+    for (const file of files) {
         const event = require(file);
-        const execute = (...args) => event.execute(...args, client);
-
-        client.events.set(event.name, execute);
-
-        if (event.rest) {
-            if (event.once) client.rest.once(event.name, execute);
-            else client.rest.on(event.name, execute);
-        } else {
-            if (event.once) client.once(event.name, execute);
-            else client.on(event.name, execute);
+        if (!event?.name) {
+            console.warn(`[Events] Archivo sin 'name' exportado: ${file}`);
+            continue;
         }
 
-        table.addRow(event.name, '✅');
-    });
+        const handler = (...args) => event.execute(...args, client);
+        client.events.set(event.name, handler);
 
-    console.log(table.toString(), "\n✅ Eventos cargados correctamente");
+        const emitter = event.rest ? client.rest : client;
+        event.once ? emitter.once(event.name, handler) : emitter.on(event.name, handler);
+
+        table.addRow(event.name, '✅');
+    }
+
+    console.log(table.toString(), '\n✅ Eventos cargados.');
 }
 
 module.exports = { loadEvents };

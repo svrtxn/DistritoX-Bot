@@ -14,7 +14,7 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        if (!checkBotAccess(interaction)) return;
+        if (!await checkBotAccess(interaction)) return;
 
         // 1. Crear el Modal
         const modal = new ModalBuilder()

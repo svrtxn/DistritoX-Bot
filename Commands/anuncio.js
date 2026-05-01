@@ -35,7 +35,7 @@ module.exports = {
         }
 
         // Verificar permisos
-        if (!checkBotAccess(interaction)) return;
+        if (!await checkBotAccess(interaction)) return;
 
         const titulo = interaction.options.getString("titulo");
         const mensaje = interaction.options.getString("mensaje");

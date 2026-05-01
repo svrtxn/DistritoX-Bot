@@ -1,0 +1,10 @@
+refactor(core): optimizacion integral, sistema de logs y postulaciones diarias
+
+- Permisos: Reescritura completa de permisos.js centralizando jerarquia y checkers.
+- Logs: Nuevo sistema de auditoria automatizada de comandos.
+- Postulaciones Diarias: Nuevo cron job (17:30) para LSPD, SAMS e Ilegales.
+- Core & Handlers: Optimizacion de memoria en DB y refactorizacion a Clean Code.
+- Voice & Canvas: Mejoras algoritmicas en canales de voz temporales y bienvenida.
+- Docs: README principal reconstruido y limpieza de configuraciones.
+
+BREAKING CHANGE: Las variables de entorno de rangos cambiaron de prefijo RANGO_ a ROL_.

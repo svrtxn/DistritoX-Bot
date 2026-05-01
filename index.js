@@ -1,158 +1,168 @@
+'use strict';
 require('dotenv').config();
 
-// ─────────────────────────────────────────────────────────────
-// 🛡️ RED DE SEGURIDAD GLOBAL — Evita que el bot se caiga
-//    por cualquier error no manejado en cualquier parte del código
-// ─────────────────────────────────────────────────────────────
-process.on('uncaughtException', (error) => {
-    console.error('🚨 [UNCAUGHT EXCEPTION] Error no atrapado — el bot sigue corriendo:', error);
-});
+// ─── SEGURIDAD GLOBAL ────────────────────────────────────────────────────────
+// Evita que el bot se caiga por errores no capturados en cualquier módulo.
+process.on('uncaughtException',  err => console.error('[FATAL] UncaughtException:', err));
+process.on('unhandledRejection', err => console.error('[FATAL] UnhandledRejection:', err));
 
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('🚨 [UNHANDLED REJECTION] Promesa rechazada no manejada — el bot sigue corriendo:', reason);
-});
-// ─────────────────────────────────────────────────────────────
-
-const cron = require('node-cron');
-const mongoose = require('mongoose');
-const Transaccion = require('./Models/transaccion'); // ⚠️ Asegúrate que tu archivo en la carpeta Models empiece con Mayúscula (Transaccion.js)
-
-// ---------------------------------------------------------
-// 🌐 IMPORTAR EL SERVIDOR DEL DASHBOARD
-// ---------------------------------------------------------
-// Si aún no creas la carpeta Dashboard, comenta esta línea para que no de error.
-const startDashboard = require('./Dashboard/server');
-
-const token = process.env.DISCORD_TOKEN;
-
+// ─── DEPENDENCIAS ────────────────────────────────────────────────────────────
+const cron      = require('node-cron');
+const mongoose  = require('mongoose');
 const { Client, GatewayIntentBits, Partials, Collection, ActivityType } = require('discord.js');
-const { Guilds, GuildMembers, GuildMessages } = GatewayIntentBits;
-const { User, Message, GuildMember, ThreadMember } = Partials;
 
-const { loadEvents } = require('./Handlers/eventHandler');
+const { loadEvents }   = require('./Handlers/eventHandler');
 const { loadCommands } = require('./Handlers/commandHandler');
-const { loadButtons } = require('./Handlers/buttonHandler');
+const { loadButtons }  = require('./Handlers/buttonHandler');
+const { ejecutarPostulacionesDiarias } = require('./Functions/postulacionesDiarias');
+const Transaccion = require('./Models/transaccion');
 
+// ─── DASHBOARD (opcional) ────────────────────────────────────────────────────
+let startDashboard = null;
+try {
+    startDashboard = require('./Dashboard/server');
+} catch {
+    console.warn('[Dashboard] Carpeta Dashboard no encontrada — omitiendo.');
+}
+
+// ─── CLIENTE DISCORD ─────────────────────────────────────────────────────────
 const client = new Client({
-    intents: [Guilds, GuildMembers, GuildMessages],
-    partials: [User, Message, GuildMember, ThreadMember]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildVoiceStates,
+    ],
+    partials: [
+        Partials.User,
+        Partials.Message,
+        Partials.GuildMember,
+        Partials.ThreadMember,
+    ],
 });
 
-client.events = new Collection();
+client.events   = new Collection();
 client.commands = new Collection();
-client.buttons = new Collection();
+client.buttons  = new Collection();
 
+// ─── CRON: RECORDATORIOS DE RENOVACIÓN ──────────────────────────────────────
+/**
+ * Busca transacciones mensuales próximas a vencer y avisa al usuario
+ * por el canal del ticket o por DM como respaldo.
+ */
+function iniciarCronRenovaciones() {
+    cron.schedule('* * * * *', async () => {
+        const ahora      = new Date();
+        const fechaLimite = new Date(ahora.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+        let porVencer;
+        try {
+            porVencer = await Transaccion.find({
+                tipo: 'INGRESO',
+                esMensual: true,
+                recordatorioEnviado: false,
+                fechaRenovacion: { $gte: ahora, $lte: fechaLimite },
+            }).lean();  // .lean() → objetos JS simples, más rápido que documentos Mongoose
+        } catch (err) {
+            console.error('[Cron:Renovaciones] Error consultando DB:', err.message);
+            return;
+        }
+
+        if (!porVencer.length) return;
+        console.log(`[Cron:Renovaciones] ${porVencer.length} renovación(es) próxima(s).`);
+
+        for (const pago of porVencer) {
+            await enviarRecordatorio(pago);
+        }
+    });
+}
+
+/**
+ * @param {object} pago — documento de transacción (lean)
+ */
+async function enviarRecordatorio(pago) {
+    const fechaStr = new Date(pago.fechaRenovacion).toLocaleDateString('es-ES');
+    let enviado = false;
+
+    if (pago.canalId) {
+        try {
+            const canal = await client.channels.fetch(pago.canalId);
+            await canal.send({
+                content: `📢 <@${pago.usuarioId}> **¡Recordatorio de Renovación!**\n\nTu suscripción (**${pago.categoria}**) vence el **${fechaStr}**.\nPor favor, gestiona tu pago para evitar cortes en el servicio. 🗓️`,
+            });
+            enviado = true;
+        } catch {
+            console.warn(`[Cron:Renovaciones] Canal ${pago.canalId} no accesible. Intentando DM...`);
+        }
+    }
+
+    if (!enviado) {
+        try {
+            const usuario = await client.users.fetch(pago.usuarioId);
+            await usuario.send({
+                content: `👋 Hola **${usuario.username}**, recordatorio de **Distrito X**.\n\n⚠️ Tu suscripción vence el **${fechaStr}**.`,
+            });
+            enviado = true;
+        } catch (err) {
+            console.error(`[Cron:Renovaciones] No se pudo enviar DM a ${pago.usuarioId}:`, err.message);
+        }
+    }
+
+    if (enviado) {
+        // Actualizar solo el campo necesario — más eficiente que pago.save()
+        await Transaccion.updateOne({ _id: pago._id }, { $set: { recordatorioEnviado: true } });
+    }
+}
+
+// ─── CRON: POSTULACIONES DIARIAS ────────────────────────────────────────────
+/**
+ * Todos los días a las 17:30 Chile limpia los canales de postulación
+ * y reenvía banner + texto predefinido.
+ */
+function iniciarCronPostulaciones() {
+    cron.schedule('30 17 * * *', () => {
+        ejecutarPostulacionesDiarias(client).catch(err =>
+            console.error('[Cron:Postulaciones] Error:', err.message)
+        );
+    }, { timezone: 'America/Santiago' });
+
+    console.log('[Postulaciones] ⏰ Cron configurado — se ejecuta a las 17:30 (America/Santiago).');
+}
+
+// ─── ARRANQUE ────────────────────────────────────────────────────────────────
 (async () => {
+    // 1. Base de datos
     try {
         mongoose.set('bufferCommands', false);
-        await mongoose.connect(process.env.MONGO_URL, {
-            serverSelectionTimeoutMS: 5000,
-        });
-        console.log('✅ Conexión exitosa a base de datos de MongoDB');
-
-        await loadEvents(client);
-        await loadButtons(client);
-
-        await client.login(token);
-
-        client.once('ready', async () => {
-            await loadCommands(client);
-            console.log(`✅ El cliente se ha iniciado correctamente: ${client.user.tag}`);
-
-            client.user.setActivity('Cocinando...', { type: ActivityType.Playing });
-
-            // ---------------------------------------------------------
-            // 🌐 INICIAR DASHBOARD WEB (PUERTO 3000)
-            // ---------------------------------------------------------
-            try {
-                startDashboard(client); // Pasamos el cliente para que pueda buscar avatares
-            } catch (error) {
-                console.error("⚠️ No se pudo iniciar el Dashboard Web (¿Falta la carpeta Dashboard?):", error.message);
-            }
-
-            // ---------------------------------------------------------
-            // ⏰ INICIO DEL SISTEMA DE CRON JOBS (RECORDATORIOS)
-            // ---------------------------------------------------------
-            console.log('⏰ Sistema de recordatorios automáticos iniciado...');
-
-            // Ejecutar cada minuto (* * * * *)
-            cron.schedule('* * * * *', async () => {
-                const ahora = new Date();
-
-                // Calcular fecha límite (Ej: Avisar 3 días antes de que venza)
-                const diasAnticipacion = 3;
-                const fechaLimite = new Date(ahora.getTime() + (diasAnticipacion * 24 * 60 * 60 * 1000));
-
-                try {
-                    // Buscar suscripciones MENSUALES, activas, que venzan pronto y NO hayan sido avisadas
-                    const porVencer = await Transaccion.find({
-                        tipo: 'INGRESO',
-                        esMensual: true,
-                        recordatorioEnviado: false,
-                        fechaRenovacion: {
-                            $gte: ahora,       // Que venza en el futuro (no vencidas ya)
-                            $lte: fechaLimite  // Pero dentro de los próximos 3 días
-                        }
-                    });
-
-                    if (porVencer.length > 0) {
-                        console.log(`🔎 Se encontraron ${porVencer.length} renovaciones próximas.`);
-                    }
-
-                    for (const pago of porVencer) {
-                        try {
-                            let mensajeEnviado = false;
-
-                            // 1. INTENTAR ENVIAR AL CANAL VINCULADO (Prioridad)
-                            if (pago.canalId) {
-                                try {
-                                    const canal = await client.channels.fetch(pago.canalId);
-                                    if (canal) {
-                                        await canal.send({
-                                            content: `📢 <@${pago.usuarioId}> **¡Recordatorio de Renovación!**\n\nTu suscripción (**${pago.categoria}**) vence el **${pago.fechaRenovacion.toLocaleDateString()}**.\nPor favor, gestiona tu pago para evitar cortes en el servicio. 🗓️`
-                                        });
-                                        mensajeEnviado = true;
-                                        console.log(`✅ Recordatorio enviado al canal ${canal.name} para ${pago.usuarioId}`);
-                                    }
-                                } catch (err) {
-                                    console.log(`⚠️ No se pudo acceder al canal ${pago.canalId}. Intentando DM como respaldo...`);
-                                }
-                            }
-
-                            // 2. RESPALDO: Si no hay canal o se borró, enviar DM
-                            if (!mensajeEnviado) {
-                                const usuario = await client.users.fetch(pago.usuarioId);
-                                if (usuario) {
-                                    await usuario.send({
-                                        content: `👋 Hola **${usuario.username}**, un recordatorio de **Distrito X**.\n\n⚠️ Tu suscripción vence el **${pago.fechaRenovacion.toLocaleDateString()}**.`
-                                    });
-                                    console.log(`✅ Recordatorio enviado por DM a ${usuario.tag}`);
-                                    mensajeEnviado = true;
-                                }
-                            }
-
-                            // 3. ACTUALIZAR BASE DE DATOS (Solo si se pudo enviar algún aviso)
-                            if (mensajeEnviado) {
-                                pago.recordatorioEnviado = true;
-                                await pago.save();
-                            }
-
-                        } catch (err) {
-                            console.error(`⚠️ Error procesando recordatorio para usuario ID: ${pago.usuarioId}`, err);
-                        }
-                    }
-                } catch (error) {
-                    console.error("❌ Error en el CronJob de renovaciones:", error);
-                }
-            });
-            // ---------------------------------------------------------
-            // FIN DEL CRON JOB
-            // ---------------------------------------------------------
-
-        });
-
-    } catch (error) {
-        console.error("❌ Error crítico al iniciar el bot:", error);
-        // No hacemos process.exit() para que los manejadores globales sigan activos
+        await mongoose.connect(process.env.MONGO_URL, { serverSelectionTimeoutMS: 5000 });
+        console.log('[DB] ✅ Conectado a MongoDB.');
+    } catch (err) {
+        console.error('[DB] ❌ No se pudo conectar a MongoDB:', err.message);
+        // Continuar — el bot puede operar sin DB en modo degradado
     }
+
+    // 2. Cargar manejadores
+    await loadEvents(client);
+    await loadButtons(client);
+
+    // 3. Login
+    await client.login(process.env.DISCORD_TOKEN);
+
+    // 4. Ready
+    client.once('ready', async () => {
+        await loadCommands(client);
+        console.log(`[Bot] ✅ Iniciado como ${client.user.tag}`);
+
+        client.user.setActivity('DistritoX', { type: ActivityType.Watching });
+
+        // Dashboard
+        if (startDashboard) {
+            try { startDashboard(client); }
+            catch (err) { console.warn('[Dashboard] No se pudo iniciar:', err.message); }
+        }
+
+        // Cron jobs
+        iniciarCronRenovaciones();
+        iniciarCronPostulaciones();
+    });
 })();

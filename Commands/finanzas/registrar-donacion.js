@@ -22,7 +22,7 @@ module.exports = {
             return interaction.reply({ content: "❌ Este comando solo puede usarse en un servidor.", flags: MessageFlags.Ephemeral });
         }
 
-        if (!checkBotAccess(interaction)) return;
+        if (!await checkBotAccess(interaction)) return;
 
         const usuario = interaction.options.getUser("usuario");
         const monto = interaction.options.getNumber("monto");

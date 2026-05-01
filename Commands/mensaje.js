@@ -33,7 +33,7 @@ module.exports = {
             });
         }
 
-        if (!checkBotAccess(interaction)) return;
+        if (!await checkBotAccess(interaction)) return;
 
         const contenidoTexto = interaction.options.getString("contenido");
         const imagen = interaction.options.getAttachment("imagen");

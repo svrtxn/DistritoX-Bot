@@ -1,98 +1,73 @@
+'use strict';
 const { Events, ChannelType, PermissionFlagsBits } = require('discord.js');
+
+const PERMS_STAFF    = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels];
+const PERMS_EVERYONE = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect];
 
 module.exports = {
     name: Events.VoiceStateUpdate,
+
+    /**
+     * @param {import('discord.js').VoiceState} oldState
+     * @param {import('discord.js').VoiceState} newState
+     */
     async execute(oldState, newState) {
-        
-        // --- VARIABLES DE ENTORNO ---
-        const generatorId = process.env.CANAL_CREADOR_VOZ; 
-        const categoryId = process.env.BOT_CATEGORIA; // ID de la categoría "# BOT"
-        const staffRoleId = process.env.STAFF_ROL;
+        const generatorId = process.env.CANAL_CREADOR_VOZ;
+        const categoryId  = process.env.BOT_CATEGORIA;
+        const staffRoleId = process.env.ROL_STAFF;
 
         const { guild, member } = newState;
 
-        // ============================================================
-        // 1. LÓGICA DE CREACIÓN (Entrar al Generador)
-        // ============================================================
+        // ── CREACIÓN: miembro entra al canal generador ────────────────────────
         if (newState.channelId === generatorId) {
-            
-            // A. VERIFICAR PERMISO DE STAFF
-            // Si NO tiene el rol de staff, lo desconectamos del canal.
             if (!member.roles.cache.has(staffRoleId)) {
-                try {
-                    await member.voice.disconnect(); 
-                    // Opcional: Enviarle un mensaje privado explicando por qué
-                    // await member.send("❌ Solo el Staff puede crear salas de soporte.");
-                } catch (e) { console.error("No se pudo desconectar al usuario sin permisos."); }
+                await member.voice.disconnect().catch(() =>
+                    console.warn(`[VoiceSoporte] No se pudo desconectar a ${member.user.tag}.`)
+                );
                 return;
             }
 
-            // B. CALCULAR EL NOMBRE (Soporte 1, Soporte 2...)
-            // Buscamos la categoría y contamos qué canales existen ya.
-            const categoryChannel = guild.channels.cache.get(categoryId);
-            
-            if (categoryChannel) {
-                // Obtenemos nombres de canales actuales en esa categoría que empiecen por "Soporte"
-                const existingNames = categoryChannel.children.cache
-                    .filter(c => c.name.startsWith("Soporte"))
-                    .map(c => c.name);
+            const category = guild.channels.cache.get(categoryId);
+            if (!category) {
+                console.error('[VoiceSoporte] BOT_CATEGORIA no encontrada — verifica el .env.');
+                return;
+            }
 
-                // Buscador de huecos: Busca el primer número disponible (ej: si existe 1 y 3, crea el 2)
-                let counter = 1;
-                while (existingNames.includes(`Soporte ${counter}`)) {
-                    counter++;
-                }
+            // Encuentra el primer número disponible (sin huecos)
+            const usados = category.children.cache
+                .filter(c => c.name.startsWith('Soporte '))
+                .map(c => parseInt(c.name.split(' ')[1], 10))
+                .filter(n => !isNaN(n));
 
-                const channelName = `Soporte ${counter}`;
+            let num = 1;
+            while (usados.includes(num)) num++;
 
-                try {
-                    // C. CREAR EL CANAL
-                    const newChannel = await guild.channels.create({
-                        name: channelName,
-                        type: ChannelType.GuildVoice,
-                        parent: categoryId, // Se crea dentro de la categoría # BOT
-                        permissionOverwrites: [
-                            {
-                                id: staffRoleId,
-                                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.ManageChannels],
-                            },
-                            {
-                                id: guild.id, // @everyone
-                                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect], // Todos pueden entrar a pedir ayuda
-                            },
-                        ],
-                    });
-
-                    // D. MOVER AL STAFF AL NUEVO CANAL
-                    await member.voice.setChannel(newChannel);
-
-                } catch (error) {
-                    console.error("❌ Error al crear canal de soporte:", error);
-                }
-            } else {
-                console.error("⚠️ La categoría BOT_CATEGORIA no se encuentra o el ID es incorrecto.");
+            try {
+                const nuevoCanal = await guild.channels.create({
+                    name: `Soporte ${num}`,
+                    type: ChannelType.GuildVoice,
+                    parent: categoryId,
+                    permissionOverwrites: [
+                        { id: staffRoleId,  allow: PERMS_STAFF    },
+                        { id: guild.id,     allow: PERMS_EVERYONE },
+                    ],
+                });
+                await member.voice.setChannel(nuevoCanal);
+            } catch (err) {
+                console.error('[VoiceSoporte] Error al crear canal:', err.message);
             }
         }
 
-        // ============================================================
-        // 2. LÓGICA DE ELIMINACIÓN (Salir del canal)
-        // ============================================================
-        if (oldState.channel) {
-            // Verificamos si quedó vacío (0 personas)
-            if (oldState.channel.members.size === 0) {
-                
-                // Verificamos que sea un canal de Soporte dentro de la categoría correcta
-                // (Para no borrar canales permanentes por error)
-                if (oldState.channel.parentId === categoryId && 
-                    oldState.channel.name.startsWith("Soporte ")) {
-                    
-                    try {
-                        await oldState.channel.delete();
-                    } catch (error) {
-                        console.error("❌ No se pudo eliminar el canal vacío:", error);
-                    }
-                }
-            }
+        // ── ELIMINACIÓN: canal de soporte queda vacío ─────────────────────────
+        if (
+            oldState.channel &&
+            oldState.channel.members.size === 0 &&
+            oldState.channel.parentId === categoryId &&
+            oldState.channel.name.startsWith('Soporte ')
+        ) {
+            await oldState.channel.delete().catch(err =>
+                console.error('[VoiceSoporte] No se pudo eliminar el canal vacío:', err.message)
+            );
         }
     },
 };

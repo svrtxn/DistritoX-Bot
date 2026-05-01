@@ -1,10 +1,12 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require("discord.js");
 const config = require("../Config/config");
+const { checkJefeBandaAccess } = require("../Functions/permisos");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("solicitar-yakuza")
         .setDescription("Solicita una compra a los Yakuza (Solo Jefes de Banda)")
+        .setDMPermission(false)
         .addStringOption(option =>
             option.setName("pedido")
                 .setDescription("Lo que deseas comprar")
@@ -12,13 +14,14 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        // Verificar si el usuario tiene el rol de Jefe de Banda
-        if (!interaction.member.roles.cache.has(config.roles.jefeBanda)) {
+        if (!interaction.guild) {
             return interaction.reply({
-                content: "❌ Solo los Jefes de Banda pueden usar este comando.",
+                content: "❌ Este comando solo puede usarse en un servidor.",
                 flags: MessageFlags.Ephemeral
             });
         }
+
+        if (!await checkJefeBandaAccess(interaction)) return;
 
         const pedido = interaction.options.getString("pedido");
         const canalYakuzaId = config.canales.yakuza;
@@ -33,7 +36,7 @@ module.exports = {
 
         const embed = new EmbedBuilder()
             .setTitle("🏮 Nueva Solicitud de Compra")
-            .setColor("#ff0000") // Rojo Yakuza
+            .setColor("#ff0000")
             .addFields(
                 { name: "Solicitante", value: `<@${interaction.user.id}>`, inline: true },
                 { name: "Pedido", value: pedido }

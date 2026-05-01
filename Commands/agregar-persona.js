@@ -1,10 +1,11 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionsBitField, MessageFlags } = require("discord.js");
-const config = require("../Config/config");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const { checkStaffAccess } = require("../Functions/permisos");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("agregar-persona")
-        .setDescription("Agrega a un usuario al canal actual (Solo Staff)")
+        .setDescription("Agrega a un usuario al canal actual (Solo Staff Mod+)")
+        .setDMPermission(false)
         .addUserOption(option =>
             option.setName("usuario")
                 .setDescription("El usuario que deseas agregar")
@@ -12,21 +13,19 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        // Verificar si el usuario tiene alguno de los roles permitidos
-        const hasPermission = config.roles.staffAdmin.some(roleId => interaction.member.roles.cache.has(roleId));
-
-        if (!hasPermission) {
+        if (!interaction.guild) {
             return interaction.reply({
-                content: "❌ No tienes los permisos necesarios para usar este comando.",
+                content: "❌ Este comando solo puede usarse en un servidor.",
                 flags: MessageFlags.Ephemeral
             });
         }
+
+        if (!await checkStaffAccess(interaction)) return;
 
         const targetUser = interaction.options.getUser("usuario");
         const channel = interaction.channel;
 
         try {
-            // Editar permisos del canal para el usuario seleccionado
             await channel.permissionOverwrites.edit(targetUser.id, {
                 ViewChannel: true,
                 SendMessages: true,

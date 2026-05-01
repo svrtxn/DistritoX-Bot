@@ -1,10 +1,12 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require("discord.js");
 const config = require("../Config/config");
+const { checkJefeBandaAccess } = require("../Functions/permisos");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("solicitar-robo")
         .setDescription("Solicita un robo a la LSPD (Solo Jefes de Banda)")
+        .setDMPermission(false)
         .addStringOption(option =>
             option.setName("tipo")
                 .setDescription("Tipo de robo (Ej: Fleeca, Joyería, etc.)")
@@ -22,12 +24,14 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        if (!interaction.member.roles.cache.has(config.roles.jefeBanda)) {
+        if (!interaction.guild) {
             return interaction.reply({
-                content: "❌ Solo los Jefes de Banda pueden usar este comando.",
+                content: "❌ Este comando solo puede usarse en un servidor.",
                 flags: MessageFlags.Ephemeral
             });
         }
+
+        if (!await checkJefeBandaAccess(interaction)) return;
 
         const tipo = interaction.options.getString("tipo");
         const personas = interaction.options.getInteger("personas");
@@ -44,7 +48,7 @@ module.exports = {
 
         const embed = new EmbedBuilder()
             .setTitle("🚨 Solicitud de Robo Entrante")
-            .setColor("#0000ff") // Azul LSPD
+            .setColor("#0000ff")
             .addFields(
                 { name: "Solicitante", value: `<@${interaction.user.id}>`, inline: true },
                 { name: "Tipo de Robo", value: tipo, inline: true },
@@ -54,8 +58,6 @@ module.exports = {
             .setTimestamp()
             .setFooter({ text: "Sistema de Alertas LSPD" });
 
-        // Para LSPD el usuario pidió comandos /aceptar y /rechazar, pero pondré botones para facilidad.
-        // Igualmente crearé los comandos slash como pidió.
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
@@ -80,3 +82,4 @@ module.exports = {
         });
     }
 };
+

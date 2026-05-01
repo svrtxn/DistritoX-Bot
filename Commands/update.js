@@ -17,7 +17,7 @@ module.exports = {
         }
 
         // Usar el checker de rango que incluye a STAFF
-        if (!checkStaffAccess(interaction)) return;
+        if (!await checkStaffAccess(interaction)) return;
 
         // Diferir la respuesta inmediatamente para evitar el error 10062 (Unknown Interaction)
         // La subida del banner (7MB) puede tardar más de los 3 segundos permitidos.

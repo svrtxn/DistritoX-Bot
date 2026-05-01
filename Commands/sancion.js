@@ -23,7 +23,7 @@ module.exports = {
         if (!interaction.guild) return;
 
         // Verificación de permisos (Sistema de Rangos)
-        if (!checkSancionesAccess(interaction)) return;
+        if (!await checkSancionesAccess(interaction)) return;
 
         const usuario = interaction.options.getUser("usuario");
         const tipo = interaction.options.getString("tipo");

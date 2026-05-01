@@ -9,7 +9,7 @@ module.exports = {
 
     async execute(interaction) {
         // Verificar permisos usando la función que incluye a STAFF
-        if (!checkStaffAccess(interaction)) return;
+        if (!await checkStaffAccess(interaction)) return;
 
         // Diferir la respuesta inmediatamente para evitar el error 10062 (Unknown Interaction)
         // Esto le da al bot más tiempo (15 minutos) para procesar la subida del archivo pesado

@@ -31,7 +31,7 @@ module.exports = {
         }
 
         // Verificar Staff
-        if (!checkBotAccess(interaction)) return;
+        if (!await checkBotAccess(interaction)) return;
 
         const monto = interaction.options.getNumber("monto");
         const descripcion = interaction.options.getString("descripcion");

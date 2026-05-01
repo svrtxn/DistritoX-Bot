@@ -4,6 +4,7 @@ const {
     PermissionFlagsBits,
     MessageFlags
 } = require('discord.js');
+const { checkBotAccess } = require('../Functions/permisos');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -23,9 +24,7 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
     async execute(interaction) {
-        // Verificación de permiso STAFF (según tu sistema de permisos)
-        const { checkBotAccess } = require("../Functions/permisos");
-        if (!checkBotAccess(interaction)) return;
+        if (!await checkBotAccess(interaction)) return;
 
         const nombre = interaction.options.getString('nombre');
         const categoria = interaction.options.getChannel('categoria');

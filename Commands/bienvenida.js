@@ -8,6 +8,7 @@ const {
 const Canvas = require('canvas');
 const { registerFont } = require('canvas');
 const path = require('path');
+const { checkDeveloperAccess } = require('../Functions/permisos');
 
 // Registrar fuente fuera de execute para evitar redundancia (Optimización)
 registerFont(path.join(process.cwd(), 'static', 'PublicSans-Regular.ttf'), { family: 'Public Sans' });
@@ -19,6 +20,15 @@ module.exports = {
         .setDMPermission(false), // Evita que el comando se ejecute en DMs
 
     async execute(interaction) {
+        if (!interaction.guild) {
+            return interaction.reply({
+                content: "❌ Este comando solo puede usarse en un servidor.",
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+        if (!await checkDeveloperAccess(interaction)) return;
+
         // Asegúrate de que estas rutas sean correctas en tu proyecto
         const bgPath = path.join(process.cwd(), 'static', 'IDENTIFICACION.png'); // Usa el nombre de archivo real de tu imagen de fondo
 

@@ -34,7 +34,7 @@ module.exports = {
         }
 
         // Verificación de permiso STAFF
-        if (!checkBotAccess(interaction)) return;
+        if (!await checkBotAccess(interaction)) return;
 
         const cantidad = interaction.options.getInteger('cantidad');
         const usuario = interaction.options.getUser('usuario');

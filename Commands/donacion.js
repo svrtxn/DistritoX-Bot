@@ -23,7 +23,7 @@ module.exports = {
         }
 
         // Verificar permisos de staff
-        if (!checkBotAccess(interaction)) return;
+        if (!await checkBotAccess(interaction)) return;
 
         // Obtener el monto ingresado por el usuario
         const monto = interaction.options.getString("monto");
