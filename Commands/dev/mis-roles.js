@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { checkDeveloperAccess } = require('../../Functions/permisos');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -7,12 +8,19 @@ module.exports = {
         .setDMPermission(false),
 
     async execute(interaction) {
+        if (!await checkDeveloperAccess(interaction)) return;
+
         // Obtenemos los roles del usuario, omitiendo @everyone
         const userRoles = interaction.member.roles.cache
             .filter(r => r.id !== interaction.guild.id)
             .map(r => `• ${r.name}: ${r.id}`)
             .join('\n');
         
+        const fs = require('fs');
+        const path = require('path');
+        const envPath = path.resolve(process.cwd(), '.env');
+        const envExists = fs.existsSync(envPath);
+
         const envDev = process.env.ROL_DEVELOPER || 'No configurado';
         const envEncargado = process.env.ROL_ENCARGADO_AREA || 'No configurado';
 
@@ -21,7 +29,10 @@ module.exports = {
             `**Lo que el bot espera encontrar (.env):**\n` +
             `> \`ROL_DEVELOPER\` = \`${envDev}\`\n` +
             `> \`ROL_ENCARGADO_AREA\` = \`${envEncargado}\`\n\n` +
-            `⚠️ **¿Por qué falla el permiso?**\nSi el ID de tu rol "Developer" o "Encargado" de arriba no coincide exactamente con los del \`.env\`, el bot no te reconocerá los permisos. Asegúrate de copiar el ID correcto de tu rol en Discord y pegarlo en el \`.env\`.`;
+            `**Información de Entorno (Debug):**\n` +
+            `> Carpeta ejecución: \`${process.cwd()}\`\n` +
+            `> .env encontrado en ejecución: \`${envExists ? 'Sí' : 'No'}\`\n\n` +
+            `⚠️ **¿Por qué falla el permiso?**\nSi el bot no encuentra tu rol en el .env (como parece ser el caso), es probable que no esté leyendo el archivo .env correcto o falten variables.`;
 
         await interaction.reply({ content, flags: MessageFlags.Ephemeral });
     }
