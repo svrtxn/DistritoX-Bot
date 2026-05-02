@@ -152,7 +152,7 @@ function iniciarCronPostulaciones() {
         await loadCommands(client);
         console.log(`[Bot] ✅ Iniciado como ${client.user.tag}`);
 
-        client.user.setActivity('DistritoX', { type: ActivityType.Watching });
+        client.user.setActivity('Cocinando...', { type: ActivityType.Playing });
 
         // Dashboard
         if (startDashboard) {
